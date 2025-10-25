@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pro Teleprompter – 3-Hour Voice-Clone Script</title>
+
+  <!-- ======  BASIC STYLING  ====== -->
+  <style>
+    :root {
+      --bg: #0e1117;
+      --fg: #f0f3f6;
+      --accent: #38bdf8;
+      --speed: 1.5;          /* scroll px per frame */
+      --font-size: 2.4rem;   /* base script size */
+    }
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Inter", system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    /* === Toolbar === */
+    #toolbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #1b1f27ee;
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      align-items: center;
+    }
+    #toolbar button, #toolbar input[type="file"] {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    #toolbar button:hover { transform: translateY(-2px); }
+
+    /* === Script window === */
+    #script {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      margin-top: 4rem;                /* space for toolbar */
+      padding: 4rem 6vw;
+      overflow-y: scroll;
+      line-height: 1.6;
+      font-size: var(--font-size);
+      white-space: pre-wrap;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ======  TOOLBAR  ====== -->
+  <div id="toolbar">
+    <button id="play">Play</button>
+    <button id="pause">Pause</button>
+    <button id="faster">Speed +</button>
+    <button id="slower">Speed –</button>
+    <button id="bigger">A+</button>
+    <button id="smaller">A-</button>
+    <button id="fullscreen">Fullscreen</button>
+
+    <!-- File loader (styled via label) -->
+    <label style="color:var(--fg);font-weight:500;cursor:pointer;">
+      Load .txt
+      <input id="loader" type="file" accept=".txt" class="hidden" />
+    </label>
+  </div>
+
+  <!-- ======  SCRIPT AREA  ====== -->
+  <div id="script">Loading script…</div>
+
+  <!-- ======  CORE LOGIC  ====== -->
+  <script>
+    /* -------- Teleprompter state -------- */
+    const scriptDiv = document.getElementById("script");
+    let playing = false;
+    let speed = parseFloat(getComputedStyle(document.documentElement)
+                          .getPropertyValue("--speed"));
+    let rafID;
+
+    /* -------- Scrolling loop -------- */
+    function step () {
+      if (playing) {
+        scriptDiv.scrollTop += speed;
+        rafID = requestAnimationFrame(step);
+      }
+    }
+
+    /* -------- Try loading script.txt -------- */
+    fetch("script.txt")
+      .then(r => r.ok ? r.text() :
+            Promise.reject("No script.txt found"))
+      .then(text => { scriptDiv.textContent = text; })
+      .catch(() => {
+        scriptDiv.textContent =
+          "⚠️ Could not load script.txt.\n\nUse the “Load .txt” button to choose a file.";
+      });
+
+    /* -------- Toolbar handlers -------- */
+    document.getElementById("play").onclick   = () => {
+      playing = true; cancelAnimationFrame(rafID); rafID = requestAnimationFrame(step);
+    };
+    document.getElementById("pause").onclick  = () => {
+      playing = false; cancelAnimationFrame(rafID);
+    };
+    document.getElementById("faster").onclick = () => { speed += 0.5; };
+    document.getElementById("slower").onclick = () => { speed = Math.max(0.5, speed - 0.5); };
+    document.getElementById("bigger").onclick = () => {
+      const size = parseFloat(getComputedStyle(document.documentElement)
+                    .getPropertyValue("--font-size")) + 0.2;
+      document.documentElement.style.setProperty("--font-size", size + "rem");
+    };
+    document.getElementById("smaller").onclick = () => {
+      const size = Math.max(1.2,
+        parseFloat(getComputedStyle(document.documentElement)
+          .getPropertyValue("--font-size")) - 0.2);
+      document.documentElement.style.setProperty("--font-size", size + "rem");
+    };
+    document.getElementById("fullscreen").onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    };
+
+    /* -------- File-loader -------- */
+    document.getElementById("loader").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      file.text().then(text => {
+        scriptDiv.textContent = text;
+        scriptDiv.scrollTop = 0;
+        playing = false;
+      });
+    });
+  </script>
+</body>
+</html>
