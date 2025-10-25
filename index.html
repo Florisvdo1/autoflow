@@ -3,38 +3,19 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pro Teleprompter – 3‑Hour Voice‑Clone Script</title>
+<title>Pro Teleprompter – Fixed Scroll</title>
 <style>
-:root {
---bg: #0e1117;
---fg: #f0f3f6;
---accent: #38bdf8;
---speed: 0.3; /* default scroll px per frame (slower) */
---font-size: 2.4rem; /* base script size */
+:root{
+--bg:#0e1117;--fg:#f0f3f6;--accent:#38bdf8;--speed:0.20;--font-size:2.4rem;
 }
-* { box-sizing: border-box; }
-html,body {
-margin:0; height:100%; background:var(--bg); color:var(--fg);
-font-family:"Inter",system-ui,sans-serif; overflow:hidden;
-}
-#toolbar {
-position:fixed; top:0; left:0; right:0; z-index:10;
-display:flex; flex-wrap:wrap; gap:.5rem; padding:.75rem 1rem;
-background:#1b1f27ee; backdrop-filter:blur(8px); align-items:center;
-}
-#toolbar button,#toolbar input[type=file] {
-padding:.5rem 1rem; border:none; border-radius:.5rem;
-background:var(--accent); color:#000; font-weight:600; cursor:pointer;
-transition:transform .15s;
-}
-#toolbar button:hover { transform:translateY(-2px); }
-#speedLabel { color:var(--fg); font-weight:600; margin-left:auto; }
-#script {
-position:absolute; top:0; left:0; right:0; bottom:0;
-margin-top:4rem; padding:4rem 6vw; overflow-y:scroll;
-line-height:1.6; font-size:var(--font-size); white-space:pre-wrap;
-}
-.hidden { display:none; }
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,sans-serif;overflow:hidden;}
+#toolbar{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;flex-wrap:wrap;gap:.5rem;padding:.75rem 1rem;background:#1b1f27ee;backdrop-filter:blur(8px);align-items:center;}
+#toolbar button,#toolbar input[type=file]{padding:.5rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#000;font-weight:600;cursor:pointer;transition:transform .15s;}
+#toolbar button:hover{transform:translateY(-2px);}
+#speedLabel{color:var(--fg);font-weight:600;margin-left:auto;}
+#script{position:absolute;top:0;left:0;right:0;bottom:0;margin-top:4rem;padding:4rem 6vw;overflow-y:scroll;line-height:1.6;font-size:var(--font-size);white-space:pre-wrap;}
+.hidden{display:none;}
 </style>
 </head>
 <body>
@@ -46,29 +27,30 @@ line-height:1.6; font-size:var(--font-size); white-space:pre-wrap;
 <button id="bigger">A+</button>
 <button id="smaller">A-</button>
 <button id="fullscreen">Fullscreen</button>
-<label style="color:var(--fg);font-weight:500;cursor:pointer;">
-Load .txt <input id="loader" type="file" accept=".txt" class="hidden" />
-</label>
-<span id="speedLabel">Speed: 0.3</span>
+<label style="color:var(--fg);font-weight:500;cursor:pointer;">Load .txt<input id="loader" type="file" accept=".txt" class="hidden"/></label>
+<span id="speedLabel">Speed: 0.20</span>
 </div>
 <div id="script">Loading script…</div>
 <script>
-const scriptDiv = document.getElementById('script');
-const speedLabel = document.getElementById('speedLabel');
-let playing=false;
+const scriptDiv=document.getElementById('script');
+const speedLabel=document.getElementById('speedLabel');
 let speed=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed'));
-let raf;
+let timer=null;
+const MIN=0.05, STEP=0.05;
 function updateLabel(){speedLabel.textContent=`Speed: ${speed.toFixed(2)}`;}
-function step(){ if(playing){ scriptDiv.scrollTop+=speed; raf=requestAnimationFrame(step);} }
+function startScroll(){ if(timer) clearInterval(timer); timer=setInterval(()=>{scriptDiv.scrollTop+=speed;},16); }
+function stopScroll(){ if(timer){clearInterval(timer);timer=null;} }
+/* Load script.txt */
 fetch('script.txt').then(r=>r.ok?r.text():Promise.reject()).then(t=>{scriptDiv.textContent=t;}).catch(()=>{scriptDiv.textContent='⚠️ Could not load script.txt. Use “Load .txt”.';});
-document.getElementById('play').onclick=()=>{playing=true;cancelAnimationFrame(raf);raf=requestAnimationFrame(step);};
-document.getElementById('pause').onclick=()=>{playing=false;cancelAnimationFrame(raf);};
-document.getElementById('faster').onclick=()=>{speed+=0.10;updateLabel();};
-document.getElementById('slower').onclick=()=>{speed=Math.max(0.05,speed-0.10);updateLabel();};
+/* Controls */
+document.getElementById('play').onclick=()=>{startScroll();};
+document.getElementById('pause').onclick=()=>{stopScroll();};
+document.getElementById('faster').onclick=()=>{speed+=STEP;updateLabel();};
+document.getElementById('slower').onclick=()=>{speed=Math.max(MIN,speed-STEP);updateLabel();};
 document.getElementById('bigger').onclick=()=>{const s=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-size'))+0.2;document.documentElement.style.setProperty('--font-size',s+'rem');};
 document.getElementById('smaller').onclick=()=>{const s=Math.max(1.2,parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--font-size'))-0.2);document.documentElement.style.setProperty('--font-size',s+'rem');};
 document.getElementById('fullscreen').onclick=()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();};
-document.getElementById('loader').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{scriptDiv.textContent=t;scriptDiv.scrollTop=0;playing=false;});});
+document.getElementById('loader').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{scriptDiv.textContent=t;scriptDiv.scrollTop=0;stopScroll();});});
 updateLabel();
 </script>
 </body>
